@@ -1,10 +1,6 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { QueueManagement } from '@/components/dashboard/QueueManagement'
-import { AppointmentManagement } from '@/components/dashboard/AppointmentManagement'
-import { DoctorManagement } from '@/components/dashboard/DoctorManagement'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Calendar, UserPlus, Clock, AlertCircle } from 'lucide-react'
 import { useDashboardStats } from '@/hooks/useApi'
 
@@ -14,11 +10,10 @@ export default function DashboardPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard Overview</h1>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">Manage your clinic operations</p>
       </div>
 
-      {/* Quick Stats */}
       {loading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
@@ -50,9 +45,6 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.overview.waitingPatients || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.overview.activeQueue || 0} active in queue
-              </p>
             </CardContent>
           </Card>
           <Card>
@@ -62,9 +54,6 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.overview.todayAppointments || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.overview.upcomingAppointments || 0} upcoming this week
-              </p>
             </CardContent>
           </Card>
           <Card>
@@ -74,9 +63,6 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.overview.totalDoctors || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.overview.totalPatients || 0} total patients
-              </p>
             </CardContent>
           </Card>
           <Card>
@@ -86,33 +72,11 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.overview.completedToday || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats?.overview.todayQueue || 0} total queue entries
-              </p>
             </CardContent>
           </Card>
         </div>
       )}
 
-      <Tabs defaultValue="queue" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="queue">Queue Management</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="doctors">Doctors</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="queue" className="space-y-6">
-          <QueueManagement />
-        </TabsContent>
-
-        <TabsContent value="appointments" className="space-y-6">
-          <AppointmentManagement />
-        </TabsContent>
-
-        <TabsContent value="doctors" className="space-y-6">
-          <DoctorManagement />
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }

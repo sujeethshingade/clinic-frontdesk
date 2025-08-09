@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, 
-  Users, 
   UserCheck, 
   Calendar, 
   Clock, 
@@ -32,7 +31,6 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile menu button */}
       <Button
         variant="outline"
         size="icon"
@@ -42,18 +40,15 @@ export function Sidebar() {
         {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
       </Button>
 
-      {/* Sidebar */}
       <div className={cn(
         "fixed inset-y-0 left-0 z-40 w-64 bg-card border-r border-border shadow-lg transform transition-transform duration-200 ease-in-out md:translate-x-0 md:static md:inset-0",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="flex items-center justify-center h-16 px-4 border-b border-border">
-            <h1 className="text-xl font-bold">🏥 Allo Health</h1>
+            <h1 className="text-xl font-bold">Allo Health Clinic</h1>
           </div>
 
-          {/* User info */}
           {user && (
             <div className="p-4 border-b border-border bg-muted/50">
               <div className="flex items-center space-x-3">
@@ -73,7 +68,6 @@ export function Sidebar() {
             </div>
           )}
 
-          {/* Navigation */}
           <nav className="flex-1 px-4 py-4 space-y-2">
             {navigation.map((item) => {
               const isActive = pathname === item.href
@@ -96,10 +90,10 @@ export function Sidebar() {
             })}
           </nav>
 
-          {/* Theme toggle and logout */}
           <div className="p-4 border-t border-border space-y-2">
-            <div className="flex justify-center">
+            <div className="flex justify-left">
               <ThemeToggle />
+              <p className="ml-2 mt-3 text-sm font-medium">Toggle Theme</p>
             </div>
             <Button
               variant="ghost"
@@ -113,7 +107,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Mobile overlay */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 z-30 bg-black bg-opacity-50 md:hidden"

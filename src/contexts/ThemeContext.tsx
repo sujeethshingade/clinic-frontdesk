@@ -46,17 +46,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       setEffectiveTheme(newEffectiveTheme)
 
-      // Update the DOM
       root.classList.remove('light', 'dark')
       root.classList.add(newEffectiveTheme)
 
-      // Store in localStorage
       localStorage.setItem('theme', theme)
     }
 
     updateTheme()
 
-    // Listen for system theme changes when theme is 'system'
     if (theme === 'system') {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
       mediaQuery.addEventListener('change', updateTheme)

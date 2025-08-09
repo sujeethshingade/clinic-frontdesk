@@ -33,38 +33,6 @@ interface QueueItem {
   priority: 'low' | 'medium' | 'high'
 }
 
-const dummyQueue: QueueItem[] = [
-  {
-    id: '1',
-    queueNumber: 1,
-    patientName: 'John Doe',
-    phone: '+1 (555) 123-4567',
-    arrivalTime: '09:00 AM',
-    estimatedWait: '15 mins',
-    status: 'with-doctor',
-    priority: 'high'
-  },
-  {
-    id: '2',
-    queueNumber: 2,
-    patientName: 'Jane Smith',
-    phone: '+1 (555) 234-5678',
-    arrivalTime: '09:15 AM',
-    estimatedWait: '30 mins',
-    status: 'waiting',
-    priority: 'medium'
-  },
-  {
-    id: '3',
-    queueNumber: 3,
-    patientName: 'Bob Johnson',
-    phone: '+1 (555) 345-6789',
-    arrivalTime: '09:30 AM',
-    estimatedWait: '45 mins',
-    status: 'waiting',
-    priority: 'low'
-  }
-]
 
 export function QueueManagement() {
   const [queue, setQueue] = useState<QueueItem[]>(dummyQueue)

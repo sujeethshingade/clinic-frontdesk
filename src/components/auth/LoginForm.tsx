@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
-import Link from 'next/link'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
@@ -85,13 +84,14 @@ export function LoginForm() {
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
-          
+
           <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Link href="/register" className="text-primary hover:underline">
-                Register here
-              </Link>
+            <p className="text-sm text-muted-foreground justify-start">
+              Use these credentials to Sign in:
+              <br />
+              Email: admin@clinic.com
+              <br />
+              Password: admin123
             </p>
           </div>
         </CardContent>

@@ -36,45 +36,6 @@ interface Appointment {
   type: 'consultation' | 'followup' | 'checkup'
 }
 
-const dummyAppointments: Appointment[] = [
-  {
-    id: '1',
-    patientName: 'Alice Brown',
-    phone: '+1 (555) 111-2222',
-    doctorName: 'Dr. Smith',
-    date: '2024-12-15',
-    time: '10:00 AM',
-    status: 'scheduled',
-    type: 'consultation'
-  },
-  {
-    id: '2',
-    patientName: 'Charlie Davis',
-    phone: '+1 (555) 333-4444',
-    doctorName: 'Dr. Johnson',
-    date: '2024-12-15',
-    time: '11:30 AM',
-    status: 'scheduled',
-    type: 'followup'
-  },
-  {
-    id: '3',
-    patientName: 'Diana Wilson',
-    phone: '+1 (555) 555-6666',
-    doctorName: 'Dr. Brown',
-    date: '2024-12-14',
-    time: '02:00 PM',
-    status: 'completed',
-    type: 'checkup'
-  }
-]
-
-const dummyDoctors = [
-  { id: '1', name: 'Dr. Smith', specialization: 'General Medicine' },
-  { id: '2', name: 'Dr. Johnson', specialization: 'Cardiology' },
-  { id: '3', name: 'Dr. Brown', specialization: 'Dermatology' },
-]
-
 const timeSlots = [
   '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
   '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM'

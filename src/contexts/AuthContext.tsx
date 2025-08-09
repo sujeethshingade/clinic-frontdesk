@@ -55,7 +55,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<AuthResponse> => {
     try {
-      // Basic validation
       if (!email.trim()) {
         throw new Error('Email is required')
       }
@@ -78,14 +77,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthToken(response.token)
       setUser(response.user)
       
-      // Store user data for persistence
       localStorage.setItem('userData', JSON.stringify(response.user))
       
       return response
     } catch (error) {
       console.error('Login failed:', error)
       
-      // Provide user-friendly error messages
       if (error instanceof Error) {
         if (error.message.includes('401') || error.message.includes('Unauthorized')) {
           throw new Error('Invalid email or password. Please check your credentials and try again.')
@@ -117,14 +114,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthToken(response.token)
       setUser(response.user)
       
-      // Store user data for persistence
       localStorage.setItem('userData', JSON.stringify(response.user))
       
       return response
     } catch (error) {
       console.error('Registration failed:', error)
       
-      // Provide user-friendly error messages
       if (error instanceof Error) {
         if (error.message.includes('409') || error.message.includes('already exists')) {
           throw new Error('An account with this email already exists. Please try logging in instead.')
