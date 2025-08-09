@@ -3,11 +3,14 @@ import connectDB from '@/lib/db/connect'
 import Doctor from '@/lib/db/models/Doctor'
 
 // GET /api/doctors/[id] - Get doctor by ID
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     
-    const doctor = await Doctor.findById(params.id).select('-__v')
+    // Await the params object
+    const { id } = await params
+    
+    const doctor = await Doctor.findById(id).select('-__v')
     
     if (!doctor) {
       return NextResponse.json(
@@ -30,10 +33,12 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/doctors/[id] - Update doctor
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     
+    // Await the params object
+    const { id } = await params
     const body = await request.json()
     
     // Basic validation
@@ -47,7 +52,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Check for duplicate email or license number if being updated
     if (body.email || body.licenseNumber) {
       const existingDoctor = await Doctor.findOne({
-        _id: { $ne: params.id },
+        _id: { $ne: id },
         $or: [
           ...(body.email ? [{ email: body.email }] : []),
           ...(body.licenseNumber ? [{ licenseNumber: body.licenseNumber }] : [])
@@ -63,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
     
     const doctor = await Doctor.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     ).select('-__v')
@@ -89,11 +94,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/doctors/[id] - Delete doctor
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
     
-    const doctor = await Doctor.findByIdAndDelete(params.id)
+    // Await the params object
+    const { id } = await params
+    
+    const doctor = await Doctor.findByIdAndDelete(id)
     
     if (!doctor) {
       return NextResponse.json(

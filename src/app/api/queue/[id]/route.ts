@@ -3,11 +3,14 @@ import connectDB from '@/lib/db/connect'
 import Queue from '@/lib/db/models/Queue'
 
 // GET /api/queue/[id] - Get queue entry by ID
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
 
-    const queueEntry = await Queue.findById(params.id)
+    // Await the params object
+    const { id } = await params
+
+    const queueEntry = await Queue.findById(id)
       .populate('patientId', 'name phone email')
       .populate('doctorId', 'name specialization')
 
@@ -32,13 +35,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // PUT /api/queue/[id] - Update queue entry
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
 
+    // Await the params object
+    const { id } = await params
     const body = await req.json()
 
-    const queueEntry = await Queue.findById(params.id)
+    const queueEntry = await Queue.findById(id)
     if (!queueEntry) {
       return NextResponse.json(
         { error: 'Queue entry not found' },
@@ -57,7 +62,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     // Update queue entry
     const updatedEntry = await Queue.findByIdAndUpdate(
-      params.id,
+      id,
       body,
       { new: true, runValidators: true }
     )
@@ -78,11 +83,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/queue/[id] - Remove from queue
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectDB()
 
-    const queueEntry = await Queue.findByIdAndDelete(params.id)
+    // Await the params object
+    const { id } = await params
+
+    const queueEntry = await Queue.findByIdAndDelete(id)
 
     if (!queueEntry) {
       return NextResponse.json(
