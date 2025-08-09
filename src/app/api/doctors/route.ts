@@ -1,18 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/db/connect'
 import Doctor from '@/lib/db/models/Doctor'
-import { ValidationUtils } from '@/lib/validation'
-import { CreateDoctorDto } from '@/lib/dto/doctor.dto'
-import { withAuth } from '@/lib/middleware/auth'
 
 // GET /api/doctors - Get all doctors with optional filtering
-export const GET = withAuth(async (request: NextRequest) => {
+export async function GET(request: NextRequest) {
   try {
     await connectDB()
     
     const { searchParams } = new URL(request.url)
     const specialization = searchParams.get('specialization')
-    const location = searchParams.get('location')
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     
@@ -20,9 +16,6 @@ export const GET = withAuth(async (request: NextRequest) => {
     const filter: any = {}
     if (specialization) {
       filter.specialization = { $regex: specialization, $options: 'i' }
-    }
-    if (location) {
-      filter.location = { $regex: location, $options: 'i' }
     }
     
     const skip = (page - 1) * limit
@@ -32,13 +25,13 @@ export const GET = withAuth(async (request: NextRequest) => {
         .select('-__v')
         .skip(skip)
         .limit(limit)
-        .sort({ name: 1 }),
+        .sort({ firstName: 1, lastName: 1 }),
       Doctor.countDocuments(filter)
     ])
     
     return NextResponse.json({
       success: true,
-      data: doctors,
+      doctors: doctors,
       pagination: {
         page,
         limit,
@@ -53,20 +46,34 @@ export const GET = withAuth(async (request: NextRequest) => {
       { status: 500 }
     )
   }
-})
+}
 
 // POST /api/doctors - Create new doctor
-export const POST = withAuth(async (request: NextRequest) => {
+export async function POST(request: NextRequest) {
   try {
     await connectDB()
     
     const body = await request.json()
     
-    // Validate input
-    const validation = await ValidationUtils.validateDto(CreateDoctorDto, body)
-    if (!validation.isValid) {
+    // Basic validation
+    if (!body.firstName || !body.lastName || !body.specialization || !body.email || !body.licenseNumber || !body.phone) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
+        { error: 'First name, last name, specialization, email, license number, and phone are required' },
+        { status: 400 }
+      )
+    }
+    
+    // Check if email or license number already exists
+    const existingDoctor = await Doctor.findOne({
+      $or: [
+        { email: body.email },
+        { licenseNumber: body.licenseNumber }
+      ]
+    })
+    
+    if (existingDoctor) {
+      return NextResponse.json(
+        { error: 'Doctor with this email or license number already exists' },
         { status: 400 }
       )
     }
@@ -76,7 +83,7 @@ export const POST = withAuth(async (request: NextRequest) => {
     
     return NextResponse.json({
       success: true,
-      data: doctor
+      doctor: doctor
     }, { status: 201 })
   } catch (error) {
     console.error('Create doctor error:', error)
@@ -85,4 +92,4 @@ export const POST = withAuth(async (request: NextRequest) => {
       { status: 500 }
     )
   }
-})
+}

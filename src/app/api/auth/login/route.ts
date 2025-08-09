@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/db/connect'
 import User from '@/lib/db/models/User'
-import { AuthUtils } from '@/lib/auth'
+import { comparePassword } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,8 +26,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() })
+    // Find user by email (only admin users)
+    const user = await User.findOne({ email: email.toLowerCase(), role: 'admin' })
 
     if (!user) {
       return NextResponse.json(
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check password
-    const isPasswordValid = await AuthUtils.comparePassword(password, user.password)
+    const isPasswordValid = await comparePassword(password, user.password)
     if (!isPasswordValid) {
       return NextResponse.json(
         { message: 'Invalid email or password' },
@@ -45,20 +45,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate JWT token
-    const token = AuthUtils.generateToken({
-      userId: user._id.toString(),
-      email: user.email,
-      role: user.role
-    })
-
     return NextResponse.json({
       message: 'Login successful',
-      token,
       user: {
         id: user._id,
         email: user.email,
-        role: user.role
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName
       }
     })
   } catch (error) {

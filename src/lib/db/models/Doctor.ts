@@ -1,64 +1,74 @@
 import mongoose, { Schema, Document } from 'mongoose'
 
-interface AvailabilitySlot {
-  date: Date
-  slots: string[]
-}
-
 export interface IDoctor extends Document {
-  name: string
+  firstName: string
+  lastName: string
+  email: string
   specialization: string
-  gender: 'male' | 'female' | 'other'
-  location: string
-  availability: AvailabilitySlot[]
-  phone?: string
-  email?: string
+  licenseNumber: string
+  phone: string
+  qualifications: string[]
+  experience: number
+  consultationFee: number
+  status: 'active' | 'inactive'
   createdAt: Date
   updatedAt: Date
 }
 
-const AvailabilitySlotSchema = new Schema({
-  date: {
-    type: Date,
-    required: true
-  },
-  slots: [{
-    type: String,
-    required: true
-  }]
-})
-
 const DoctorSchema = new Schema<IDoctor>({
-  name: {
+  firstName: {
     type: String,
     required: true,
     trim: true,
-    maxlength: 100
+    maxlength: 50
+  },
+  lastName: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 50
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true,
+    match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   },
   specialization: {
     type: String,
     required: true,
     trim: true
   },
-  gender: {
+  licenseNumber: {
     type: String,
-    enum: ['male', 'female', 'other'],
-    required: true
+    required: true,
+    unique: true,
+    trim: true
   },
-  location: {
+  phone: {
     type: String,
     required: true,
     trim: true
   },
-  availability: [AvailabilitySlotSchema],
-  phone: {
+  qualifications: [{
     type: String,
     trim: true
+  }],
+  experience: {
+    type: Number,
+    default: 0,
+    min: 0
   },
-  email: {
+  consultationFee: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  status: {
     type: String,
-    lowercase: true,
-    match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    enum: ['active', 'inactive'],
+    default: 'active'
   },
   createdAt: {
     type: Date,

@@ -60,7 +60,6 @@ QueueSchema.pre('save', function(next) {
   next()
 })
 
-// Auto-increment queue number
 QueueSchema.pre('save', async function(next) {
   if (this.isNew) {
     const lastQueue = await mongoose.model('Queue').findOne().sort({ queueNumber: -1 })

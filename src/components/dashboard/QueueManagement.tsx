@@ -10,99 +10,193 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-
-const addPatientSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  phone: z.string().min(10, 'Phone number is required'),
-  priority: z.enum(['low', 'medium', 'high']),
-})
-
-type AddPatientFormData = z.infer<typeof addPatientSchema>
+import { queueService, patientService, doctorService } from '@/lib/api'
 
 interface QueueItem {
-  id: string
+  _id: string
   queueNumber: number
-  patientName: string
-  phone: string
-  arrivalTime: string
-  estimatedWait: string
-  status: 'waiting' | 'with-doctor' | 'completed'
-  priority: 'low' | 'medium' | 'high'
+  patient: {
+    _id: string
+    firstName: string
+    lastName: string
+    phone: string
+  }
+  doctor: {
+    _id: string
+    firstName: string
+    lastName: string
+    specialization: string
+  }
+  priority: 'normal' | 'high' | 'urgent'
+  status: 'waiting' | 'in-progress' | 'completed' | 'cancelled'
+  reason?: string
+  notes?: string
+  createdAt: string
 }
 
+interface Patient {
+  _id: string
+  firstName: string
+  lastName: string
+  phone: string
+  email: string
+}
+
+interface Doctor {
+  _id: string
+  firstName: string
+  lastName: string
+  specialization: string
+}
 
 export function QueueManagement() {
-  const [queue, setQueue] = useState<QueueItem[]>(dummyQueue)
+  const [queue, setQueue] = useState<QueueItem[]>([])
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [isAddPatientOpen, setIsAddPatientOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<AddPatientFormData>({
-    resolver: zodResolver(addPatientSchema),
-  })
+  // Form state
+  const [selectedPatientId, setSelectedPatientId] = useState('')
+  const [selectedDoctorId, setSelectedDoctorId] = useState('')
+  const [priority, setPriority] = useState<'normal' | 'high' | 'urgent'>('normal')
+  const [reason, setReason] = useState('')
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [queueData, patientsData, doctorsData] = await Promise.all([
+        queueService.getAll(),
+        patientService.getAll(),
+        doctorService.getAll()
+      ])
+      
+      setQueue((queueData as any).queue || [])
+      setPatients((patientsData as any).patients || [])
+      setDoctors((doctorsData as any).doctors || [])
+    } catch (err: any) {
+      setError(err.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const getStatusBadge = (status: QueueItem['status']) => {
     switch (status) {
       case 'waiting':
         return <Badge variant="secondary">Waiting</Badge>
-      case 'with-doctor':
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">With Doctor</Badge>
+      case 'in-progress':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">In Progress</Badge>
       case 'completed':
         return <Badge className="bg-green-500 hover:bg-green-600">Completed</Badge>
+      case 'cancelled':
+        return <Badge variant="destructive">Cancelled</Badge>
     }
   }
 
   const getPriorityBadge = (priority: QueueItem['priority']) => {
     switch (priority) {
-      case 'low':
-        return <Badge variant="outline">Low</Badge>
-      case 'medium':
-        return <Badge variant="secondary">Medium</Badge>
+      case 'normal':
+        return <Badge variant="outline">Normal</Badge>
       case 'high':
-        return <Badge variant="destructive">High</Badge>
+        return <Badge variant="secondary">High</Badge>
+      case 'urgent':
+        return <Badge variant="destructive">Urgent</Badge>
     }
   }
 
   const filteredQueue = queue.filter(item => {
-    const matchesSearch = item.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.phone.includes(searchTerm)
+    const patientName = `${item.patient.firstName} ${item.patient.lastName}`
+    const matchesSearch = patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         item.patient.phone.includes(searchTerm)
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
-  const updateStatus = (id: string, newStatus: QueueItem['status']) => {
-    setQueue(prev => prev.map(item => 
-      item.id === id ? { ...item, status: newStatus } : item
-    ))
-  }
-
-  const removeFromQueue = (id: string) => {
-    setQueue(prev => prev.filter(item => item.id !== id))
-  }
-
-  const onAddPatient = (data: AddPatientFormData) => {
-    const newPatient: QueueItem = {
-      id: Date.now().toString(),
-      queueNumber: queue.length + 1,
-      patientName: data.name,
-      phone: data.phone,
-      arrivalTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      estimatedWait: `${(queue.length + 1) * 15} mins`,
-      status: 'waiting',
-      priority: data.priority,
+  const updateStatus = async (id: string, newStatus: QueueItem['status']) => {
+    try {
+      await queueService.update(id, { status: newStatus })
+      setQueue(prev => prev.map(item => 
+        item._id === id ? { ...item, status: newStatus } : item
+      ))
+    } catch (err: any) {
+      alert(`Failed to update status: ${err.message}`)
     }
+  }
+
+  const removeFromQueue = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this patient from the queue?')) return
     
-    setQueue(prev => [...prev, newPatient])
-    reset()
-    setIsAddPatientOpen(false)
+    try {
+      await queueService.delete(id)
+      setQueue(prev => prev.filter(item => item._id !== id))
+    } catch (err: any) {
+      alert(`Failed to remove from queue: ${err.message}`)
+    }
+  }
+
+  const onAddPatient = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!selectedPatientId || !selectedDoctorId) {
+      alert('Please select both patient and doctor')
+      return
+    }
+
+    try {
+      const response = await queueService.create({
+        patientId: selectedPatientId,
+        doctorId: selectedDoctorId,
+        priority,
+        reason
+      })
+      
+      setQueue(prev => [...prev, (response as any).queueEntry])
+      setSelectedPatientId('')
+      setSelectedDoctorId('')
+      setPriority('normal')
+      setReason('')
+      setIsAddPatientOpen(false)
+    } catch (err: any) {
+      alert(`Failed to add patient to queue: ${err.message}`)
+    }
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Patient Queue</CardTitle>
+          <CardDescription>Loading...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Patient Queue</CardTitle>
+          <CardDescription>Error: {error}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={loadData}>Retry</Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -133,8 +227,9 @@ export function QueueManagement() {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="waiting">Waiting</SelectItem>
-                <SelectItem value="with-doctor">With Doctor</SelectItem>
+                <SelectItem value="in-progress">In Progress</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
 
@@ -142,56 +237,71 @@ export function QueueManagement() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Patient
+                  Add to Queue
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add New Patient to Queue</DialogTitle>
+                  <DialogTitle>Add Patient to Queue</DialogTitle>
                   <DialogDescription>
-                    Enter patient details to add them to the waiting queue.
+                    Add an existing patient to the waiting queue.
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onAddPatient)} className="space-y-4">
+                <form onSubmit={onAddPatient} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Patient Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="Enter patient name"
-                      {...register('name')}
-                    />
-                    {errors.name && (
-                      <p className="text-sm text-destructive">{errors.name.message}</p>
-                    )}
+                    <Label htmlFor="patient">Patient</Label>
+                    <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select patient" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {patients.map((patient) => (
+                          <SelectItem key={patient._id} value={patient._id}>
+                            {patient.firstName} {patient.lastName} - {patient.phone}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      placeholder="Enter phone number"
-                      {...register('phone')}
-                    />
-                    {errors.phone && (
-                      <p className="text-sm text-destructive">{errors.phone.message}</p>
-                    )}
+                    <Label htmlFor="doctor">Doctor</Label>
+                    <Select value={selectedDoctorId} onValueChange={setSelectedDoctorId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {doctors.map((doctor) => (
+                          <SelectItem key={doctor._id} value={doctor._id}>
+                            Dr. {doctor.firstName} {doctor.lastName} - {doctor.specialization}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="priority">Priority</Label>
-                    <Select onValueChange={(value) => register('priority').onChange({ target: { value } })}>
+                    <Select value={priority} onValueChange={(value: any) => setPriority(value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="low">Low</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="normal">Normal</SelectItem>
                         <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="urgent">Urgent</SelectItem>
                       </SelectContent>
                     </Select>
-                    {errors.priority && (
-                      <p className="text-sm text-destructive">{errors.priority.message}</p>
-                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="reason">Reason (Optional)</Label>
+                    <Input
+                      id="reason"
+                      placeholder="Reason for visit"
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                    />
                   </div>
 
                   <div className="flex justify-end space-x-2">
@@ -212,52 +322,60 @@ export function QueueManagement() {
                   <TableHead>Queue #</TableHead>
                   <TableHead>Patient Name</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Arrival Time</TableHead>
-                  <TableHead>Estimated Wait</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Doctor</TableHead>
                   <TableHead>Priority</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Reason</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredQueue.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.queueNumber}</TableCell>
-                    <TableCell>{item.patientName}</TableCell>
-                    <TableCell>{item.phone}</TableCell>
-                    <TableCell>{item.arrivalTime}</TableCell>
-                    <TableCell>{item.estimatedWait}</TableCell>
-                    <TableCell>{getStatusBadge(item.status)}</TableCell>
-                    <TableCell>{getPriorityBadge(item.priority)}</TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        {item.status === 'waiting' && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(item.id, 'with-doctor')}
-                          >
-                            Call In
-                          </Button>
-                        )}
-                        {item.status === 'with-doctor' && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(item.id, 'completed')}
-                          >
-                            Complete
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => removeFromQueue(item.id)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
+                {filteredQueue.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      No patients in queue
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  filteredQueue.map((item) => (
+                    <TableRow key={item._id}>
+                      <TableCell className="font-medium">{item.queueNumber}</TableCell>
+                      <TableCell>{item.patient.firstName} {item.patient.lastName}</TableCell>
+                      <TableCell>{item.patient.phone}</TableCell>
+                      <TableCell>Dr. {item.doctor.firstName} {item.doctor.lastName}</TableCell>
+                      <TableCell>{getPriorityBadge(item.priority)}</TableCell>
+                      <TableCell>{getStatusBadge(item.status)}</TableCell>
+                      <TableCell>{item.reason || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          {item.status === 'waiting' && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateStatus(item._id, 'in-progress')}
+                            >
+                              Call In
+                            </Button>
+                          )}
+                          {item.status === 'in-progress' && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateStatus(item._id, 'completed')}
+                            >
+                              Complete
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => removeFromQueue(item._id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>

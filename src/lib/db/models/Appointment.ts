@@ -55,7 +55,6 @@ AppointmentSchema.pre('save', function(next) {
   next()
 })
 
-// Compound index to prevent double booking
 AppointmentSchema.index({ doctorId: 1, date: 1, time: 1 }, { unique: true })
 
 export default mongoose.models.Appointment || mongoose.model<IAppointment>('Appointment', AppointmentSchema)

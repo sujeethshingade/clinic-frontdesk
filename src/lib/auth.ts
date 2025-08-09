@@ -1,8 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+const JWT_SECRET = process.env.JWT_SECRET
 
 export interface JwtPayload {
   userId: string
@@ -10,28 +9,25 @@ export interface JwtPayload {
   role: string
 }
 
-export class AuthUtils {
-  static async hashPassword(password: string): Promise<string> {
-    const saltRounds = 12
-    return bcrypt.hash(password, saltRounds)
-  }
+export async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 12
+  return bcrypt.hash(password, saltRounds)
+}
 
-  static async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
-    return bcrypt.compare(password, hashedPassword)
-  }
+export async function comparePassword(password: string, hashedPassword: string): Promise<boolean> {
+  return bcrypt.compare(password, hashedPassword)
+}
 
-  static generateToken(payload: JwtPayload): string {
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as jwt.SignOptions)
+export function verifyToken(token: string): JwtPayload {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not defined')
   }
+  return jwt.verify(token, JWT_SECRET) as unknown as JwtPayload
+}
 
-  static verifyToken(token: string): JwtPayload {
-    return jwt.verify(token, JWT_SECRET) as JwtPayload
+export function extractTokenFromHeader(authHeader: string | undefined): string | null {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null
   }
-
-  static extractTokenFromHeader(authHeader: string | undefined): string | null {
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null
-    }
-    return authHeader.substring(7)
-  }
+  return authHeader.substring(7)
 }

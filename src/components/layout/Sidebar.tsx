@@ -10,7 +10,8 @@ import {
   Clock, 
   LogOut,
   Menu,
-  X
+  X,
+  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext'
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Doctors', href: '/dashboard/doctors', icon: UserCheck },
+  { name: 'Patients', href: '/dashboard/patients', icon: Users },
   { name: 'Queue', href: '/dashboard/queue', icon: Clock },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Calendar },
 ]

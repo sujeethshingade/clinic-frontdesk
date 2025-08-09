@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit, Trash2, MapPin, AlertCircle } from 'lucide-react'
+import { Plus, Search, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -10,29 +10,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useDoctors, useCreateDoctor, useUpdateDoctor, useDeleteDoctor } from '@/hooks/useApi'
-import { Doctor } from '@/lib/services'
+import { doctorService } from '@/lib/api'
 
-const doctorSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address'),
-  specialization: z.string().min(1, 'Specialization is required'),
-  licenseNumber: z.string().min(1, 'License number is required'),
-  phone: z.string().min(10, 'Phone number is required'),
-  qualifications: z.array(z.string()).min(1, 'At least one qualification is required'),
-  experience: z.number().min(0, 'Experience must be a positive number'),
-  consultationFee: z.number().min(0, 'Consultation fee must be a positive number'),
-  availability: z.record(z.string(), z.object({
-    start: z.string(),
-    end: z.string()
-  })).optional()
-})
-
-type DoctorFormData = z.infer<typeof doctorSchema>
+interface Doctor {
+  _id: string
+  firstName: string
+  lastName: string
+  email: string
+  specialization: string
+  licenseNumber: string
+  phone: string
+  qualifications: string[]
+  experience: number
+  consultationFee: number
+  status: 'active' | 'inactive'
+  createdAt: string
+}
 
 const specializations = [
   'General Medicine',
@@ -54,42 +47,64 @@ const qualificationOptions = [
 ]
 
 export function DoctorManagement() {
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [specializationFilter, setSpecializationFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [isAddDoctorOpen, setIsAddDoctorOpen] = useState(false)
   const [editingDoctor, setEditingDoctor] = useState<Doctor | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  // API hooks
-  const { data: doctorsData, loading, error, refetch } = useDoctors({
-    page: currentPage,
-    limit: 10,
-    search: searchTerm,
-    specialization: specializationFilter !== 'all' ? specializationFilter : undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined
-  })
+  // Form state
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [specialization, setSpecialization] = useState('')
+  const [licenseNumber, setLicenseNumber] = useState('')
+  const [phone, setPhone] = useState('')
+  const [selectedQualifications, setSelectedQualifications] = useState<string[]>([])
+  const [experience, setExperience] = useState('')
+  const [consultationFee, setConsultationFee] = useState('')
 
-  const createDoctor = useCreateDoctor()
-  const updateDoctor = useUpdateDoctor()
-  const deleteDoctor = useDeleteDoctor()
+  useEffect(() => {
+    loadDoctors()
+  }, [])
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<DoctorFormData>({
-    resolver: zodResolver(doctorSchema),
-    defaultValues: {
-      qualifications: [],
-      availability: {}
+  const loadDoctors = async () => {
+    try {
+      setLoading(true)
+      const response = await doctorService.getAll()
+      setDoctors((response as any).doctors || [])
+    } catch (err: any) {
+      setError(err.message || 'Failed to load doctors')
+    } finally {
+      setLoading(false)
     }
-  })
+  }
 
-  const watchedQualifications = watch('qualifications') || []
+  const resetForm = () => {
+    setFirstName('')
+    setLastName('')
+    setEmail('')
+    setSpecialization('')
+    setLicenseNumber('')
+    setPhone('')
+    setSelectedQualifications([])
+    setExperience('')
+    setConsultationFee('')
+  }
+
+  const fillForm = (doctor: Doctor) => {
+    setFirstName(doctor.firstName)
+    setLastName(doctor.lastName)
+    setEmail(doctor.email)
+    setSpecialization(doctor.specialization)
+    setLicenseNumber(doctor.licenseNumber)
+    setPhone(doctor.phone)
+    setSelectedQualifications(doctor.qualifications)
+    setExperience(doctor.experience.toString())
+    setConsultationFee(doctor.consultationFee.toString())
+  }
 
   const getStatusBadge = (status: 'active' | 'inactive') => {
     switch (status) {
@@ -104,73 +119,89 @@ export function DoctorManagement() {
     if (!confirm('Are you sure you want to delete this doctor?')) return
     
     try {
-      await deleteDoctor.mutate(id)
-      refetch()
-    } catch (error) {
-      console.error('Delete failed:', error)
+      await doctorService.delete(id)
+      setDoctors(prev => prev.filter(doctor => doctor._id !== id))
+    } catch (err: any) {
+      alert(`Failed to delete doctor: ${err.message}`)
     }
   }
 
-  const onSubmitDoctor = async (data: DoctorFormData) => {
-    try {
-      // Prepare data with default availability if not provided
-      const doctorData = {
-        ...data,
-        availability: data.availability || {}
-      }
+  const onSubmitDoctor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    if (!firstName || !lastName || !email || !specialization || !licenseNumber || !phone) {
+      alert('Please fill in all required fields')
+      return
+    }
 
+    const doctorData = {
+      firstName,
+      lastName,
+      email,
+      specialization,
+      licenseNumber,
+      phone,
+      qualifications: selectedQualifications,
+      experience: parseInt(experience) || 0,
+      consultationFee: parseFloat(consultationFee) || 0,
+    }
+
+    try {
       if (editingDoctor) {
-        await updateDoctor.mutate({ id: editingDoctor._id, data: doctorData })
+        const response = await doctorService.update(editingDoctor._id, doctorData)
+        setDoctors(prev => prev.map(doctor => 
+          doctor._id === editingDoctor._id ? (response as any).doctor : doctor
+        ))
       } else {
-        await createDoctor.mutate(doctorData)
+        const response = await doctorService.create(doctorData)
+        setDoctors(prev => [...prev, (response as any).doctor])
       }
       
-      reset()
+      resetForm()
       setIsAddDoctorOpen(false)
       setEditingDoctor(null)
-      refetch()
-    } catch (error) {
-      console.error('Submit failed:', error)
+    } catch (err: any) {
+      alert(`Failed to ${editingDoctor ? 'update' : 'create'} doctor: ${err.message}`)
     }
   }
 
   const startEdit = (doctor: Doctor) => {
     setEditingDoctor(doctor)
-    setValue('firstName', doctor.firstName)
-    setValue('lastName', doctor.lastName)
-    setValue('email', doctor.email)
-    setValue('specialization', doctor.specialization)
-    setValue('licenseNumber', doctor.licenseNumber)
-    setValue('phone', doctor.phone)
-    setValue('qualifications', doctor.qualifications)
-    setValue('experience', doctor.experience)
-    setValue('consultationFee', doctor.consultationFee)
-    setValue('availability', doctor.availability)
+    fillForm(doctor)
     setIsAddDoctorOpen(true)
   }
 
   const handleDialogClose = () => {
     setIsAddDoctorOpen(false)
     setEditingDoctor(null)
-    reset()
+    resetForm()
   }
 
   const addQualification = (qualification: string) => {
-    if (!watchedQualifications.includes(qualification)) {
-      setValue('qualifications', [...watchedQualifications, qualification])
+    if (!selectedQualifications.includes(qualification)) {
+      setSelectedQualifications([...selectedQualifications, qualification])
     }
   }
 
   const removeQualification = (qualification: string) => {
-    setValue('qualifications', watchedQualifications.filter(q => q !== qualification))
+    setSelectedQualifications(selectedQualifications.filter(q => q !== qualification))
   }
+
+  const filteredDoctors = doctors.filter(doctor => {
+    const fullName = `${doctor.firstName} ${doctor.lastName}`.toLowerCase()
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || 
+                         doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         doctor.phone.includes(searchTerm)
+    const matchesSpecialization = specializationFilter === 'all' || doctor.specialization === specializationFilter
+    return matchesSearch && matchesSpecialization
+  })
 
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Doctor Management</CardTitle>
-          <CardDescription>Loading doctors...</CardDescription>
+          <CardDescription>Loading...</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
@@ -186,23 +217,14 @@ export function DoctorManagement() {
       <Card>
         <CardHeader>
           <CardTitle>Doctor Management</CardTitle>
-          <CardDescription>Error loading doctors</CardDescription>
+          <CardDescription>Error: {error}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-2 text-red-600">
-            <AlertCircle className="h-4 w-4" />
-            <span>{error}</span>
-          </div>
-          <Button onClick={refetch} className="mt-4">
-            Try Again
-          </Button>
+          <Button onClick={loadDoctors}>Retry</Button>
         </CardContent>
       </Card>
     )
   }
-
-  const doctors = doctorsData?.doctors || []
-  const pagination = doctorsData?.pagination
 
   return (
     <div className="space-y-6">
@@ -237,17 +259,6 @@ export function DoctorManagement() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Dialog open={isAddDoctorOpen} onOpenChange={handleDialogClose}>
               <DialogTrigger asChild>
                 <Button>
@@ -264,50 +275,47 @@ export function DoctorManagement() {
                     {editingDoctor ? 'Update doctor information.' : 'Add a new doctor to the clinic.'}
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit(onSubmitDoctor)} className="space-y-4">
+                <form onSubmit={onSubmitDoctor} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
+                      <Label htmlFor="firstName">First Name *</Label>
                       <Input
                         id="firstName"
                         placeholder="Enter first name"
-                        {...register('firstName')}
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
                       />
-                      {errors.firstName && (
-                        <p className="text-sm text-destructive">{errors.firstName.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
+                      <Label htmlFor="lastName">Last Name *</Label>
                       <Input
                         id="lastName"
                         placeholder="Enter last name"
-                        {...register('lastName')}
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
                       />
-                      {errors.lastName && (
-                        <p className="text-sm text-destructive">{errors.lastName.message}</p>
-                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">Email *</Label>
                     <Input
                       id="email"
                       type="email"
                       placeholder="Enter email address"
-                      {...register('email')}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
                     />
-                    {errors.email && (
-                      <p className="text-sm text-destructive">{errors.email.message}</p>
-                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="specialization">Specialization</Label>
-                      <Select onValueChange={(value) => setValue('specialization', value)}>
+                      <Label htmlFor="specialization">Specialization *</Label>
+                      <Select value={specialization} onValueChange={setSpecialization}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select specialization" />
                         </SelectTrigger>
@@ -317,40 +325,35 @@ export function DoctorManagement() {
                           ))}
                         </SelectContent>
                       </Select>
-                      {errors.specialization && (
-                        <p className="text-sm text-destructive">{errors.specialization.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="licenseNumber">License Number</Label>
+                      <Label htmlFor="licenseNumber">License Number *</Label>
                       <Input
                         id="licenseNumber"
                         placeholder="Enter license number"
-                        {...register('licenseNumber')}
+                        value={licenseNumber}
+                        onChange={(e) => setLicenseNumber(e.target.value)}
+                        required
                       />
-                      {errors.licenseNumber && (
-                        <p className="text-sm text-destructive">{errors.licenseNumber.message}</p>
-                      )}
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="phone">Phone *</Label>
                     <Input
                       id="phone"
                       placeholder="Enter phone number"
-                      {...register('phone')}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      required
                     />
-                    {errors.phone && (
-                      <p className="text-sm text-destructive">{errors.phone.message}</p>
-                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Qualifications</Label>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {watchedQualifications.map((qual) => (
+                      {selectedQualifications.map((qual) => (
                         <Badge 
                           key={qual} 
                           variant="secondary" 
@@ -367,15 +370,12 @@ export function DoctorManagement() {
                       </SelectTrigger>
                       <SelectContent>
                         {qualificationOptions
-                          .filter(qual => !watchedQualifications.includes(qual))
+                          .filter(qual => !selectedQualifications.includes(qual))
                           .map((qual) => (
                             <SelectItem key={qual} value={qual}>{qual}</SelectItem>
                           ))}
                       </SelectContent>
                     </Select>
-                    {errors.qualifications && (
-                      <p className="text-sm text-destructive">{errors.qualifications.message}</p>
-                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -386,11 +386,9 @@ export function DoctorManagement() {
                         type="number"
                         min="0"
                         placeholder="Enter years of experience"
-                        {...register('experience', { valueAsNumber: true })}
+                        value={experience}
+                        onChange={(e) => setExperience(e.target.value)}
                       />
-                      {errors.experience && (
-                        <p className="text-sm text-destructive">{errors.experience.message}</p>
-                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -401,11 +399,9 @@ export function DoctorManagement() {
                         min="0"
                         step="0.01"
                         placeholder="Enter consultation fee"
-                        {...register('consultationFee', { valueAsNumber: true })}
+                        value={consultationFee}
+                        onChange={(e) => setConsultationFee(e.target.value)}
                       />
-                      {errors.consultationFee && (
-                        <p className="text-sm text-destructive">{errors.consultationFee.message}</p>
-                      )}
                     </div>
                   </div>
 
@@ -413,14 +409,8 @@ export function DoctorManagement() {
                     <Button type="button" variant="outline" onClick={handleDialogClose}>
                       Cancel
                     </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={createDoctor.loading || updateDoctor.loading}
-                    >
-                      {createDoctor.loading || updateDoctor.loading 
-                        ? 'Saving...' 
-                        : editingDoctor ? 'Update Doctor' : 'Add Doctor'
-                      }
+                    <Button type="submit">
+                      {editingDoctor ? 'Update Doctor' : 'Add Doctor'}
                     </Button>
                   </div>
                 </form>
@@ -443,14 +433,14 @@ export function DoctorManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {doctors.length === 0 ? (
+                {filteredDoctors.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No doctors found. Add your first doctor to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  doctors.map((doctor) => (
+                  filteredDoctors.map((doctor) => (
                     <TableRow key={doctor._id}>
                       <TableCell className="font-medium">
                         Dr. {doctor.firstName} {doctor.lastName}
@@ -476,7 +466,6 @@ export function DoctorManagement() {
                             size="sm"
                             variant="destructive"
                             onClick={() => handleDeleteDoctor(doctor._id)}
-                            disabled={deleteDoctor.loading}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -488,34 +477,6 @@ export function DoctorManagement() {
               </TableBody>
             </Table>
           </div>
-
-          {pagination && pagination.pages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-muted-foreground">
-                Showing {((currentPage - 1) * pagination.limit) + 1} to{' '}
-                {Math.min(currentPage * pagination.limit, pagination.total)} of{' '}
-                {pagination.total} results
-              </p>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, pagination.pages))}
-                  disabled={currentPage === pagination.pages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

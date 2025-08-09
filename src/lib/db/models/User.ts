@@ -5,7 +5,7 @@ export interface IUser extends Document {
   lastName: string
   email: string
   password: string
-  role: 'admin' | 'receptionist' | 'doctor' | 'patient'
+  role: 'admin'
   createdAt: Date
 }
 
@@ -38,8 +38,8 @@ const UserSchema = new Schema<IUser>({
   },
   role: {
     type: String,
-    enum: ['admin', 'receptionist', 'doctor', 'patient'],
-    default: 'patient'
+    enum: ['admin'],
+    default: 'admin'
   },
   createdAt: {
     type: Date,

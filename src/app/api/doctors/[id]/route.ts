@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/db/connect'
 import Doctor from '@/lib/db/models/Doctor'
-import { ValidationUtils } from '@/lib/validation'
-import { UpdateDoctorDto } from '@/lib/dto/doctor.dto'
-import { withAuth } from '@/lib/middleware/auth'
 
 // GET /api/doctors/[id] - Get doctor by ID
-export const GET = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     
@@ -21,7 +18,7 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
     
     return NextResponse.json({
       success: true,
-      data: doctor
+      doctor: doctor
     })
   } catch (error) {
     console.error('Get doctor error:', error)
@@ -30,22 +27,39 @@ export const GET = withAuth(async (request: NextRequest, { params }: { params: {
       { status: 500 }
     )
   }
-})
+}
 
 // PUT /api/doctors/[id] - Update doctor
-export const PUT = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     
     const body = await request.json()
     
-    // Validate input
-    const validation = await ValidationUtils.validateDto(UpdateDoctorDto, body)
-    if (!validation.isValid) {
+    // Basic validation
+    if (body.email && !/\S+@\S+\.\S+/.test(body.email)) {
       return NextResponse.json(
-        { error: 'Validation failed', details: validation.errors },
+        { error: 'Invalid email format' },
         { status: 400 }
       )
+    }
+    
+    // Check for duplicate email or license number if being updated
+    if (body.email || body.licenseNumber) {
+      const existingDoctor = await Doctor.findOne({
+        _id: { $ne: params.id },
+        $or: [
+          ...(body.email ? [{ email: body.email }] : []),
+          ...(body.licenseNumber ? [{ licenseNumber: body.licenseNumber }] : [])
+        ]
+      })
+      
+      if (existingDoctor) {
+        return NextResponse.json(
+          { error: 'Doctor with this email or license number already exists' },
+          { status: 400 }
+        )
+      }
     }
     
     const doctor = await Doctor.findByIdAndUpdate(
@@ -63,7 +77,7 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
     
     return NextResponse.json({
       success: true,
-      data: doctor
+      doctor: doctor
     })
   } catch (error) {
     console.error('Update doctor error:', error)
@@ -72,10 +86,10 @@ export const PUT = withAuth(async (request: NextRequest, { params }: { params: {
       { status: 500 }
     )
   }
-})
+}
 
 // DELETE /api/doctors/[id] - Delete doctor
-export const DELETE = withAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB()
     
@@ -99,4 +113,4 @@ export const DELETE = withAuth(async (request: NextRequest, { params }: { params
       { status: 500 }
     )
   }
-})
+}
