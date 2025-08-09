@@ -171,7 +171,21 @@ export function DoctorManagement() {
     setIsAddDoctorOpen(true)
   }
 
-  const handleDialogClose = () => {
+  const handleAddClick = () => {
+    resetForm()
+    setEditingDoctor(null)
+    setIsAddDoctorOpen(true)
+  }
+
+  const handleDialogClose = (open: boolean) => {
+    setIsAddDoctorOpen(open)
+    if (!open) {
+      setEditingDoctor(null)
+      resetForm()
+    }
+  }
+
+  const handleDialogCancel = () => {
     setIsAddDoctorOpen(false)
     setEditingDoctor(null)
     resetForm()
@@ -261,7 +275,7 @@ export function DoctorManagement() {
 
             <Dialog open={isAddDoctorOpen} onOpenChange={handleDialogClose}>
               <DialogTrigger asChild>
-                <Button>
+                <Button onClick={handleAddClick}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add Doctor
                 </Button>
@@ -406,7 +420,7 @@ export function DoctorManagement() {
                   </div>
 
                   <div className="flex justify-end space-x-2">
-                    <Button type="button" variant="outline" onClick={handleDialogClose}>
+                    <Button type="button" variant="outline" onClick={handleDialogCancel}>
                       Cancel
                     </Button>
                     <Button type="submit">

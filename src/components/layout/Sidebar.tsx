@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
   Home, 
-  UserCheck, 
+  Stethoscope, 
   Calendar, 
   Clock, 
   LogOut,
@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Doctors', href: '/dashboard/doctors', icon: UserCheck },
+  { name: 'Doctors', href: '/dashboard/doctors', icon: Stethoscope },
   { name: 'Patients', href: '/dashboard/patients', icon: Users },
   { name: 'Queue', href: '/dashboard/queue', icon: Clock },
   { name: 'Appointments', href: '/dashboard/appointments', icon: Calendar },
