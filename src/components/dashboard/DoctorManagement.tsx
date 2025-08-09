@@ -74,7 +74,7 @@ export function DoctorManagement() {
     try {
       setLoading(true)
       const response = await doctorService.getAll()
-      setDoctors((response as any).doctors || [])
+      setDoctors((response as any).data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load doctors')
     } finally {
@@ -95,15 +95,15 @@ export function DoctorManagement() {
   }
 
   const fillForm = (doctor: Doctor) => {
-    setFirstName(doctor.firstName)
-    setLastName(doctor.lastName)
-    setEmail(doctor.email)
-    setSpecialization(doctor.specialization)
-    setLicenseNumber(doctor.licenseNumber)
-    setPhone(doctor.phone)
-    setSelectedQualifications(doctor.qualifications)
-    setExperience(doctor.experience.toString())
-    setConsultationFee(doctor.consultationFee.toString())
+    setFirstName(doctor.firstName || '')
+    setLastName(doctor.lastName || '')
+    setEmail(doctor.email || '')
+    setSpecialization(doctor.specialization || '')
+    setLicenseNumber(doctor.licenseNumber || '')
+    setPhone(doctor.phone || '')
+    setSelectedQualifications(doctor.qualifications || [])
+    setExperience(doctor.experience?.toString() || '')
+    setConsultationFee(doctor.consultationFee?.toString() || '')
   }
 
   const getStatusBadge = (status: 'active' | 'inactive') => {
@@ -154,7 +154,7 @@ export function DoctorManagement() {
         ))
       } else {
         const response = await doctorService.create(doctorData)
-        setDoctors(prev => [...prev, (response as any).doctor])
+        setDoctors(prev => [...prev, (response as any).data])
       }
       
       resetForm()
@@ -202,10 +202,12 @@ export function DoctorManagement() {
   }
 
   const filteredDoctors = doctors.filter(doctor => {
+    if (!doctor || !doctor.firstName || !doctor.lastName) return false
+    
     const fullName = `${doctor.firstName} ${doctor.lastName}`.toLowerCase()
     const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || 
-                         doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.phone.includes(searchTerm)
+                         (doctor.email && doctor.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (doctor.phone && doctor.phone.includes(searchTerm))
     const matchesSpecialization = specializationFilter === 'all' || doctor.specialization === specializationFilter
     return matchesSearch && matchesSpecialization
   })
@@ -457,16 +459,16 @@ export function DoctorManagement() {
                   filteredDoctors.map((doctor) => (
                     <TableRow key={doctor._id}>
                       <TableCell className="font-medium">
-                        Dr. {doctor.firstName} {doctor.lastName}
+                        Dr. {doctor.firstName || ''} {doctor.lastName || ''}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{doctor.specialization}</Badge>
+                        <Badge variant="outline">{doctor.specialization || 'N/A'}</Badge>
                       </TableCell>
-                      <TableCell>{doctor.phone}</TableCell>
-                      <TableCell>{doctor.email}</TableCell>
-                      <TableCell>{doctor.experience} years</TableCell>
-                      <TableCell>${doctor.consultationFee}</TableCell>
-                      <TableCell>{getStatusBadge(doctor.status)}</TableCell>
+                      <TableCell>{doctor.phone || 'N/A'}</TableCell>
+                      <TableCell>{doctor.email || 'N/A'}</TableCell>
+                      <TableCell>{doctor.experience || 0} years</TableCell>
+                      <TableCell>${doctor.consultationFee || 0}</TableCell>
+                      <TableCell>{getStatusBadge(doctor.status || 'inactive')}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button

@@ -108,8 +108,8 @@ export function PatientManagement() {
   const onSubmitPatient = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!name || !email || !phone) {
-      alert('Please fill in all required fields')
+    if (!name || !phone) {
+      alert('Please fill in name and phone number (required fields)')
       return
     }
 
@@ -273,14 +273,13 @@ export function PatientManagement() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
+                      <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
                         type="email"
                         placeholder="Enter email address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        required
                       />
                     </div>
                   </div>

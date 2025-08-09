@@ -28,22 +28,45 @@ export async function GET(req: NextRequest) {
       const startDate = new Date(date)
       const endDate = new Date(date)
       endDate.setDate(endDate.getDate() + 1)
-      query.appointmentDateTime = { $gte: startDate, $lt: endDate }
+      query.appointmentDate = { $gte: startDate, $lt: endDate }
     }
 
     const [appointments, total] = await Promise.all([
       Appointment.find(query)
-        .populate('patientId', 'name phone email')
-        .populate('doctorId', 'name specialization')
-        .sort({ appointmentDateTime: 1 })
+        .populate('patientId')
+        .populate('doctorId')
+        .sort({ appointmentDate: 1, appointmentTime: 1 })
         .skip(skip)
         .limit(limit),
       Appointment.countDocuments(query)
     ])
 
+    // Transform data to match frontend expectations
+    const transformedAppointments = appointments.map((appointment: any) => ({
+      _id: appointment._id,
+      patient: {
+        _id: appointment.patientId._id,
+        name: appointment.patientId.fullName,
+        phone: appointment.patientId.contactInfo.phone,
+        email: appointment.patientId.contactInfo.email || ''
+      },
+      doctor: {
+        _id: appointment.doctorId._id,
+        firstName: appointment.doctorId.firstName,
+        lastName: appointment.doctorId.lastName,
+        specialization: appointment.doctorId.specialization
+      },
+      appointmentDate: appointment.appointmentDate.toISOString(),
+      appointmentTime: appointment.appointmentTime,
+      type: appointment.type,
+      reason: appointment.reason,
+      status: appointment.status,
+      createdAt: appointment.createdAt
+    }))
+
     return NextResponse.json({
       success: true,
-      data: appointments,
+      data: transformedAppointments,
       pagination: {
         page,
         limit,
@@ -68,9 +91,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
 
     // Basic validation
-    if (!body.patientId || !body.doctorId || !body.appointmentDateTime) {
+    if (!body.patientId || !body.doctorId || !body.appointmentDate || !body.appointmentTime) {
       return NextResponse.json(
-        { error: 'Patient ID, Doctor ID, and appointment date/time are required' },
+        { error: 'Patient ID, Doctor ID, appointment date, and time are required' },
         { status: 400 }
       )
     }
@@ -97,7 +120,8 @@ export async function POST(req: NextRequest) {
     const appointment = new Appointment({
       patientId: body.patientId,
       doctorId: body.doctorId,
-      appointmentDateTime: new Date(body.appointmentDateTime),
+      appointmentDate: new Date(body.appointmentDate),
+      appointmentTime: body.appointmentTime,
       type: body.type || 'consultation',
       reason: body.reason || '',
       notes: body.notes || '',
@@ -105,14 +129,37 @@ export async function POST(req: NextRequest) {
     })
 
     await appointment.save()
-    await appointment.populate([
-      { path: 'patientId', select: 'name phone email' },
-      { path: 'doctorId', select: 'name specialization' }
-    ])
+    
+    // Populate the saved appointment
+    await appointment.populate('patientId')
+    await appointment.populate('doctorId')
+
+    // Transform response to match frontend expectations
+    const transformedAppointment = {
+      _id: appointment._id,
+      patient: {
+        _id: appointment.patientId._id,
+        name: (appointment.patientId as any).fullName,
+        phone: (appointment.patientId as any).contactInfo.phone,
+        email: (appointment.patientId as any).contactInfo.email || ''
+      },
+      doctor: {
+        _id: appointment.doctorId._id,
+        firstName: (appointment.doctorId as any).firstName,
+        lastName: (appointment.doctorId as any).lastName,
+        specialization: (appointment.doctorId as any).specialization
+      },
+      appointmentDate: appointment.appointmentDate.toISOString(),
+      appointmentTime: appointment.appointmentTime,
+      type: appointment.type,
+      reason: appointment.reason,
+      status: appointment.status,
+      createdAt: appointment.createdAt
+    }
 
     return NextResponse.json({
       success: true,
-      data: appointment
+      data: transformedAppointment
     }, { status: 201 })
   } catch (error) {
     console.error('Create appointment error:', error)

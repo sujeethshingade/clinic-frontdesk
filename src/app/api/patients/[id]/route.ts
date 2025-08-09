@@ -19,9 +19,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
     
+    // Transform response to match frontend expectations
+    const transformedPatient = {
+      _id: patient._id,
+      patientId: `P${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`,
+      name: patient.fullName,
+      email: patient.contactInfo.email || '',
+      phone: patient.contactInfo.phone,
+      address: patient.contactInfo.address || '',
+      dateOfBirth: patient.dateOfBirth?.toISOString() || '',
+      gender: patient.gender || '',
+      emergencyContact: patient.contactInfo.emergencyContact?.name || '',
+      medicalHistory: patient.medicalNotes || '',
+      createdAt: patient.createdAt.toISOString()
+    }
+    
     return NextResponse.json({
       success: true,
-      data: patient
+      data: transformedPatient
     })
   } catch (error) {
     console.error('Get patient error:', error)
@@ -49,9 +64,35 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
     
+    // Transform the update data to match the schema
+    const updateData: any = {}
+    
+    if (body.name) updateData.fullName = body.name
+    if (body.dateOfBirth) updateData.dateOfBirth = new Date(body.dateOfBirth)
+    if (body.gender) updateData.gender = body.gender
+    if (body.medicalHistory) updateData.medicalNotes = body.medicalHistory
+    
+    // Handle contactInfo updates
+    const contactInfoUpdates: any = {}
+    if (body.phone) contactInfoUpdates.phone = body.phone
+    if (body.email !== undefined) contactInfoUpdates.email = body.email
+    if (body.address !== undefined) contactInfoUpdates.address = body.address
+    if (body.emergencyContact) {
+      contactInfoUpdates.emergencyContact = {
+        name: body.emergencyContact,
+        phone: body.emergencyContact,
+        relationship: 'Emergency Contact'
+      }
+    }
+    
+    // Use dot notation for nested updates
+    Object.keys(contactInfoUpdates).forEach(key => {
+      updateData[`contactInfo.${key}`] = contactInfoUpdates[key]
+    })
+    
     const patient = await Patient.findByIdAndUpdate(
       id,
-      body,
+      updateData,
       { new: true, runValidators: true }
     ).select('-__v')
     
@@ -62,9 +103,24 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
     
+    // Transform response to match frontend expectations
+    const transformedPatient = {
+      _id: patient._id,
+      patientId: `P${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`,
+      name: patient.fullName,
+      email: patient.contactInfo.email || '',
+      phone: patient.contactInfo.phone,
+      address: patient.contactInfo.address || '',
+      dateOfBirth: patient.dateOfBirth?.toISOString() || '',
+      gender: patient.gender || '',
+      emergencyContact: patient.contactInfo.emergencyContact?.name || '',
+      medicalHistory: patient.medicalNotes || '',
+      createdAt: patient.createdAt.toISOString()
+    }
+    
     return NextResponse.json({
       success: true,
-      data: patient
+      data: transformedPatient
     })
   } catch (error) {
     console.error('Update patient error:', error)

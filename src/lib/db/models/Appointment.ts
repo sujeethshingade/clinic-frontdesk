@@ -3,10 +3,12 @@ import mongoose, { Schema, Document } from 'mongoose'
 export interface IAppointment extends Document {
   patientId: mongoose.Types.ObjectId
   doctorId: mongoose.Types.ObjectId
-  date: Date
-  time: string
-  status: 'booked' | 'completed' | 'canceled'
+  appointmentDate: Date
+  appointmentTime: string
+  type: 'consultation' | 'follow-up' | 'emergency'
+  reason?: string
   notes?: string
+  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled'
   createdAt: Date
   updatedAt: Date
 }
@@ -22,23 +24,32 @@ const AppointmentSchema = new Schema<IAppointment>({
     ref: 'Doctor',
     required: true
   },
-  date: {
+  appointmentDate: {
     type: Date,
     required: true
   },
-  time: {
+  appointmentTime: {
     type: String,
     required: true,
     trim: true
   },
-  status: {
+  type: {
     type: String,
-    enum: ['booked', 'completed', 'canceled'],
-    default: 'booked'
+    enum: ['consultation', 'follow-up', 'emergency'],
+    default: 'consultation'
+  },
+  reason: {
+    type: String,
+    trim: true
   },
   notes: {
     type: String,
     trim: true
+  },
+  status: {
+    type: String,
+    enum: ['scheduled', 'confirmed', 'completed', 'cancelled'],
+    default: 'scheduled'
   },
   createdAt: {
     type: Date,
@@ -55,6 +66,6 @@ AppointmentSchema.pre('save', function(next) {
   next()
 })
 
-AppointmentSchema.index({ doctorId: 1, date: 1, time: 1 }, { unique: true })
+AppointmentSchema.index({ doctorId: 1, appointmentDate: 1, appointmentTime: 1 }, { unique: true })
 
 export default mongoose.models.Appointment || mongoose.model<IAppointment>('Appointment', AppointmentSchema)

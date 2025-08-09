@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
-import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuth } from '@/contexts/AuthContext'
 
 const navigation = [
@@ -92,11 +91,7 @@ export function Sidebar() {
             })}
           </nav>
 
-          <div className="p-4 border-t border-border space-y-2">
-            <div className="flex justify-left">
-              <ThemeToggle />
-              <p className="ml-2 mt-3 text-sm font-medium">Toggle Theme</p>
-            </div>
+          <div className="p-4 border-t border-border">
             <Button
               variant="ghost"
               className="w-full justify-start"

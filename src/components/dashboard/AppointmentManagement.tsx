@@ -16,8 +16,7 @@ interface Appointment {
   _id: string
   patient: {
     _id: string
-    firstName: string
-    lastName: string
+    name: string
     phone: string
     email: string
   }
@@ -37,8 +36,7 @@ interface Appointment {
 
 interface Patient {
   _id: string
-  firstName: string
-  lastName: string
+  name: string
   phone: string
   email: string
 }
@@ -86,9 +84,9 @@ export function AppointmentManagement() {
         doctorService.getAll()
       ])
       
-      setAppointments((appointmentsData as any).appointments || [])
-      setPatients((patientsData as any).patients || [])
-      setDoctors((doctorsData as any).doctors || [])
+      setAppointments((appointmentsData as any).data || [])
+      setPatients((patientsData as any).data || [])
+      setDoctors((doctorsData as any).data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load data')
     } finally {
@@ -121,7 +119,7 @@ export function AppointmentManagement() {
   }
 
   const filteredAppointments = appointments.filter(appointment => {
-    const patientName = `${appointment.patient.firstName} ${appointment.patient.lastName}`
+    const patientName = appointment.patient.name
     const doctorName = `${appointment.doctor.firstName} ${appointment.doctor.lastName}`
     const matchesSearch = patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doctorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -169,7 +167,7 @@ export function AppointmentManagement() {
       }
       
       const response = await appointmentService.create(appointmentData)
-      setAppointments(prev => [...prev, (response as any).appointment])
+      setAppointments(prev => [...prev, (response as any).data])
       
       resetForm()
       setIsBookAppointmentOpen(false)
@@ -266,7 +264,7 @@ export function AppointmentManagement() {
                       <SelectContent>
                         {patients.map((patient) => (
                           <SelectItem key={patient._id} value={patient._id}>
-                            {patient.firstName} {patient.lastName} - {patient.phone}
+                            {patient.name} - {patient.phone}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -378,7 +376,7 @@ export function AppointmentManagement() {
                   filteredAppointments.map((appointment) => (
                     <TableRow key={appointment._id}>
                       <TableCell className="font-medium">
-                        {appointment.patient.firstName} {appointment.patient.lastName}
+                        {appointment.patient.name}
                       </TableCell>
                       <TableCell>{appointment.patient.phone}</TableCell>
                       <TableCell>Dr. {appointment.doctor.firstName} {appointment.doctor.lastName}</TableCell>

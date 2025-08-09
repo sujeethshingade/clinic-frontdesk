@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      doctors: doctors,
+      data: doctors,
       pagination: {
         page,
         limit,
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      doctor: doctor
+      data: doctor
     }, { status: 201 })
   } catch (error) {
     console.error('Create doctor error:', error)

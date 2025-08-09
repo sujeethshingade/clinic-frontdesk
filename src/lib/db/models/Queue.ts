@@ -2,11 +2,11 @@ import mongoose, { Schema, Document } from 'mongoose'
 
 export interface IQueue extends Document {
   patientId: mongoose.Types.ObjectId
+  doctorId: mongoose.Types.ObjectId
   queueNumber: number
-  arrivalTime: Date
-  estimatedWait: number // in minutes
-  status: 'waiting' | 'with-doctor' | 'completed'
-  priority: 'normal' | 'urgent'
+  priority: 'normal' | 'high' | 'urgent'
+  status: 'waiting' | 'in-progress' | 'completed' | 'cancelled'
+  reason?: string
   notes?: string
   createdAt: Date
   updatedAt: Date
@@ -18,28 +18,28 @@ const QueueSchema = new Schema<IQueue>({
     ref: 'Patient',
     required: true
   },
+  doctorId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Doctor',
+    required: true
+  },
   queueNumber: {
     type: Number,
-    required: true,
-    unique: true
-  },
-  arrivalTime: {
-    type: Date,
-    default: Date.now
-  },
-  estimatedWait: {
-    type: Number,
-    default: 15
-  },
-  status: {
-    type: String,
-    enum: ['waiting', 'with-doctor', 'completed'],
-    default: 'waiting'
+    required: true
   },
   priority: {
     type: String,
-    enum: ['normal', 'urgent'],
+    enum: ['normal', 'high', 'urgent'],
     default: 'normal'
+  },
+  status: {
+    type: String,
+    enum: ['waiting', 'in-progress', 'completed', 'cancelled'],
+    default: 'waiting'
+  },
+  reason: {
+    type: String,
+    trim: true
   },
   notes: {
     type: String,
@@ -57,14 +57,6 @@ const QueueSchema = new Schema<IQueue>({
 
 QueueSchema.pre('save', function(next) {
   this.updatedAt = new Date()
-  next()
-})
-
-QueueSchema.pre('save', async function(next) {
-  if (this.isNew) {
-    const lastQueue = await mongoose.model('Queue').findOne().sort({ queueNumber: -1 })
-    this.queueNumber = lastQueue ? lastQueue.queueNumber + 1 : 1
-  }
   next()
 })
 

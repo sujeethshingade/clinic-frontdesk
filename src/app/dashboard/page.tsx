@@ -193,7 +193,7 @@ export default function DashboardPage() {
                 <div className="space-y-3 max-h-[250px] overflow-y-auto">
                   {stats?.recentActivities && stats.recentActivities.length > 0 ? (
                     stats.recentActivities.map((activity) => (
-                      <div key={activity._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div key={activity._id} className="flex items-center justify-between p-3 rounded-lg">
                         <div className="flex-1">
                           <p className="text-sm font-medium">
                             Patient {activity.patientId?.name || 'Unknown'} - Queue #{activity.queueNumber}

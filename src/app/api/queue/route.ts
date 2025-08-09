@@ -26,13 +26,35 @@ export async function GET(req: NextRequest) {
     }
 
     const queueEntries = await Queue.find(query)
-      .populate('patientId', 'name patientId')
-      .populate('doctorId', 'name specialization')
+      .populate('patientId')
+      .populate('doctorId')
       .sort({ priority: -1, queueNumber: 1 })
+
+    // Transform data to match frontend expectations
+    const transformedQueue = queueEntries.map((entry: any) => ({
+      _id: entry._id,
+      queueNumber: entry.queueNumber,
+      patient: {
+        _id: entry.patientId._id,
+        name: entry.patientId.fullName,
+        phone: entry.patientId.contactInfo.phone
+      },
+      doctor: {
+        _id: entry.doctorId._id,
+        firstName: entry.doctorId.firstName,
+        lastName: entry.doctorId.lastName,
+        specialization: entry.doctorId.specialization
+      },
+      priority: entry.priority,
+      status: entry.status,
+      reason: entry.reason,
+      notes: entry.notes,
+      createdAt: entry.createdAt
+    }))
 
     return NextResponse.json({
       success: true,
-      data: queueEntries
+      data: transformedQueue
     })
   } catch (error) {
     console.error('Get queue error:', error)
@@ -116,14 +138,36 @@ export async function POST(req: NextRequest) {
     })
 
     await queueEntry.save()
-    await queueEntry.populate([
-      { path: 'patientId', select: 'name patientId' },
-      { path: 'doctorId', select: 'name specialization' }
-    ])
+    
+    // Populate the saved entry
+    await queueEntry.populate('patientId')
+    await queueEntry.populate('doctorId')
+
+    // Transform response to match frontend expectations
+    const transformedEntry = {
+      _id: queueEntry._id,
+      queueNumber: queueEntry.queueNumber,
+      patient: {
+        _id: queueEntry.patientId._id,
+        name: (queueEntry.patientId as any).fullName,
+        phone: (queueEntry.patientId as any).contactInfo.phone
+      },
+      doctor: {
+        _id: queueEntry.doctorId._id,
+        firstName: (queueEntry.doctorId as any).firstName,
+        lastName: (queueEntry.doctorId as any).lastName,
+        specialization: (queueEntry.doctorId as any).specialization
+      },
+      priority: queueEntry.priority,
+      status: queueEntry.status,
+      reason: queueEntry.reason,
+      notes: queueEntry.notes,
+      createdAt: queueEntry.createdAt
+    }
 
     return NextResponse.json({
       success: true,
-      data: queueEntry
+      data: transformedEntry
     }, { status: 201 })
   } catch (error) {
     console.error('Add to queue error:', error)

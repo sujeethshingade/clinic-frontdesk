@@ -18,20 +18,34 @@ export async function GET(req: NextRequest) {
     const query: any = {}
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { patientId: { $regex: search, $options: 'i' } }
+        { fullName: { $regex: search, $options: 'i' } },
+        { 'contactInfo.email': { $regex: search, $options: 'i' } },
+        { 'contactInfo.phone': { $regex: search, $options: 'i' } }
       ]
     }
 
-    const [patients, total] = await Promise.all([
+    const [patientsData, total] = await Promise.all([
       Patient.find(query)
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
       Patient.countDocuments(query)
     ])
+
+    // Transform data to match frontend expectations
+    const patients = patientsData.map((patient, index) => ({
+      _id: patient._id,
+      patientId: `P${String(index + 1).padStart(6, '0')}`, // Generate display ID
+      name: patient.fullName,
+      email: patient.contactInfo.email || '',
+      phone: patient.contactInfo.phone,
+      address: patient.contactInfo.address || '',
+      dateOfBirth: patient.dateOfBirth?.toISOString() || '',
+      gender: patient.gender || '',
+      emergencyContact: patient.contactInfo.emergencyContact?.name || '',
+      medicalHistory: patient.medicalNotes || '',
+      createdAt: patient.createdAt.toISOString()
+    }))
 
     return NextResponse.json({
       success: true,
@@ -60,44 +74,62 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
 
     // Basic validation
-    if (!body.name || !body.email || !body.phone) {
+    if (!body.name || !body.phone) {
       return NextResponse.json(
-        { error: 'Name, email, and phone are required' },
+        { error: 'Name and phone are required' },
         { status: 400 }
       )
     }
 
-    // Check if email already exists
-    const existingPatient = await Patient.findOne({ email: body.email })
-    if (existingPatient) {
-      return NextResponse.json(
-        { error: 'Patient with this email already exists' },
-        { status: 400 }
-      )
+    // Check if email already exists (if email is provided)
+    if (body.email) {
+      const existingPatient = await Patient.findOne({ 'contactInfo.email': body.email })
+      if (existingPatient) {
+        return NextResponse.json(
+          { error: 'Patient with this email already exists' },
+          { status: 400 }
+        )
+      }
     }
 
-    // Generate patient ID
-    const patientCount = await Patient.countDocuments()
-    const patientId = `P${String(patientCount + 1).padStart(6, '0')}`
-
-    // Create patient
+    // Create patient with correct schema structure
     const patient = new Patient({
-      patientId,
-      name: body.name,
-      email: body.email,
-      phone: body.phone,
-      address: body.address || '',
+      fullName: body.name,
+      contactInfo: {
+        phone: body.phone,
+        email: body.email || undefined,
+        address: body.address || undefined,
+        emergencyContact: body.emergencyContact ? {
+          name: body.emergencyContact,
+          phone: body.emergencyContact,
+          relationship: 'Emergency Contact'
+        } : undefined
+      },
       dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : undefined,
-      gender: body.gender || '',
-      emergencyContact: body.emergencyContact || '',
-      medicalHistory: body.medicalHistory || ''
+      gender: body.gender || undefined,
+      medicalNotes: body.medicalHistory || undefined
     })
 
     await patient.save()
 
+    // Transform response to match frontend expectations
+    const transformedPatient = {
+      _id: patient._id,
+      patientId: `P${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`,
+      name: patient.fullName,
+      email: patient.contactInfo.email || '',
+      phone: patient.contactInfo.phone,
+      address: patient.contactInfo.address || '',
+      dateOfBirth: patient.dateOfBirth?.toISOString() || '',
+      gender: patient.gender || '',
+      emergencyContact: patient.contactInfo.emergencyContact?.name || '',
+      medicalHistory: patient.medicalNotes || '',
+      createdAt: patient.createdAt.toISOString()
+    }
+
     return NextResponse.json({
       success: true,
-      data: patient
+      data: transformedPatient
     }, { status: 201 })
   } catch (error) {
     console.error('Create patient error:', error)

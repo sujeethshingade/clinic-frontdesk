@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, MoreHorizontal } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -17,8 +17,7 @@ interface QueueItem {
   queueNumber: number
   patient: {
     _id: string
-    firstName: string
-    lastName: string
+    name: string
     phone: string
   }
   doctor: {
@@ -36,8 +35,7 @@ interface QueueItem {
 
 interface Patient {
   _id: string
-  firstName: string
-  lastName: string
+  name: string
   phone: string
   email: string
 }
@@ -78,9 +76,9 @@ export function QueueManagement() {
         doctorService.getAll()
       ])
       
-      setQueue((queueData as any).queue || [])
-      setPatients((patientsData as any).patients || [])
-      setDoctors((doctorsData as any).doctors || [])
+      setQueue((queueData as any).data || [])
+      setPatients((patientsData as any).data || [])
+      setDoctors((doctorsData as any).data || [])
     } catch (err: any) {
       setError(err.message || 'Failed to load data')
     } finally {
@@ -113,7 +111,7 @@ export function QueueManagement() {
   }
 
   const filteredQueue = queue.filter(item => {
-    const patientName = `${item.patient.firstName} ${item.patient.lastName}`
+    const patientName = item.patient.name
     const matchesSearch = patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.patient.phone.includes(searchTerm)
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter
@@ -158,7 +156,7 @@ export function QueueManagement() {
         reason
       })
       
-      setQueue(prev => [...prev, (response as any).queueEntry])
+      setQueue(prev => [...prev, (response as any).data])
       setSelectedPatientId('')
       setSelectedDoctorId('')
       setPriority('normal')
@@ -257,7 +255,7 @@ export function QueueManagement() {
                       <SelectContent>
                         {patients.map((patient) => (
                           <SelectItem key={patient._id} value={patient._id}>
-                            {patient.firstName} {patient.lastName} - {patient.phone}
+                            {patient.name} - {patient.phone}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -340,7 +338,7 @@ export function QueueManagement() {
                   filteredQueue.map((item) => (
                     <TableRow key={item._id}>
                       <TableCell className="font-medium">{item.queueNumber}</TableCell>
-                      <TableCell>{item.patient.firstName} {item.patient.lastName}</TableCell>
+                      <TableCell>{item.patient.name}</TableCell>
                       <TableCell>{item.patient.phone}</TableCell>
                       <TableCell>Dr. {item.doctor.firstName} {item.doctor.lastName}</TableCell>
                       <TableCell>{getPriorityBadge(item.priority)}</TableCell>
