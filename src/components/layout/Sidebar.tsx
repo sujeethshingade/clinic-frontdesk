@@ -50,25 +50,6 @@ export function Sidebar() {
             <h1 className="text-xl font-bold">Allo Health Clinic</h1>
           </div>
 
-          {user && (
-            <div className="p-4 border-b border-border bg-muted/50">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
-                  {user.firstName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {user.firstName && user.lastName 
-                      ? `${user.firstName} ${user.lastName}` 
-                      : user.email
-                    }
-                  </p>
-                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
           <nav className="flex-1 px-4 py-4 space-y-2">
             {navigation.map((item) => {
               const isActive = pathname === item.href
@@ -92,6 +73,26 @@ export function Sidebar() {
           </nav>
 
           <div className="p-4 border-t border-border">
+
+          {user && (
+            <div className="p-2 bg-muted/50">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-medium">
+                  {user.firstName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {user.firstName && user.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : user.email
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
             <Button
               variant="ghost"
               className="w-full justify-start"

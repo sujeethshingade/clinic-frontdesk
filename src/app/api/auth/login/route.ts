@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import connectDB from '@/lib/db/connect'
 import User from '@/lib/db/models/User'
-import { comparePassword } from '@/lib/auth'
+import { comparePassword, generateToken } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,8 +42,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const token = generateToken({
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role
+    })
+
     return NextResponse.json({
       message: 'Login successful',
+      token,
       user: {
         id: user._id,
         email: user.email,

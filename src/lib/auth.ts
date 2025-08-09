@@ -25,6 +25,13 @@ export function verifyToken(token: string): JwtPayload {
   return jwt.verify(token, JWT_SECRET) as unknown as JwtPayload
 }
 
+export function generateToken(payload: JwtPayload): string {
+  if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not defined')
+  }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
+}
+
 export function extractTokenFromHeader(authHeader: string | undefined): string | null {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return null
