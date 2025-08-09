@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build query
     const query: any = {}
     if (search) {
       query.$or = [
@@ -73,7 +72,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
-    // Basic validation
     if (!body.name || !body.phone) {
       return NextResponse.json(
         { error: 'Name and phone are required' },
@@ -92,7 +90,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create patient with correct schema structure
     const patient = new Patient({
       fullName: body.name,
       contactInfo: {
@@ -112,7 +109,6 @@ export async function POST(req: NextRequest) {
 
     await patient.save()
 
-    // Transform response to match frontend expectations
     const transformedPatient = {
       _id: patient._id,
       patientId: `P${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`,

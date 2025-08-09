@@ -28,11 +28,12 @@ interface DashboardStats {
   }>
   recentActivities: Array<{
     _id: string
-    patientId: { name: string }
-    doctorId: { name: string }
+    patientId: { fullName: string }
+    doctorId: { firstName: string; lastName: string }
     status: string
     queueNumber: number
     updatedAt: string
+    reason?: string
   }>
 }
 

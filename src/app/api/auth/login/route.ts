@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
     
     const { email, password } = body
 
-    // Basic validation
     if (!email || !password) {
       return NextResponse.json(
         { message: 'Email and password are required' },
@@ -26,7 +25,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find user by email (only admin users)
     const user = await User.findOne({ email: email.toLowerCase(), role: 'admin' })
 
     if (!user) {
@@ -36,7 +34,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check password
     const isPasswordValid = await comparePassword(password, user.password)
     if (!isPasswordValid) {
       return NextResponse.json(

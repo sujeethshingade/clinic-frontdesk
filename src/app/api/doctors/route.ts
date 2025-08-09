@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     
-    // Build filter query
     const filter: any = {}
     if (specialization) {
       filter.specialization = { $regex: specialization, $options: 'i' }
@@ -55,7 +54,6 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json()
     
-    // Basic validation
     if (!body.firstName || !body.lastName || !body.specialization || !body.email || !body.licenseNumber || !body.phone) {
       return NextResponse.json(
         { error: 'First name, last name, specialization, email, license number, and phone are required' },
@@ -63,7 +61,6 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Check if email or license number already exists
     const existingDoctor = await Doctor.findOne({
       $or: [
         { email: body.email },

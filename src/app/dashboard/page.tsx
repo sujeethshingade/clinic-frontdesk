@@ -10,23 +10,20 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 export default function DashboardPage() {
   const { data: stats, loading, error } = useDashboardStats()
 
-  // Prepare chart data from real API data
   const queueByDoctorData = stats?.queueByDoctor?.map(item => ({
-    name: item.doctorName,
-    total: item.total,
-    waiting: item.waiting,
-    inProgress: item.inProgress,
-    completed: item.completed
+    name: item.doctorName || 'Unknown Doctor',
+    total: item.total || 0,
+    waiting: item.waiting || 0,
+    inProgress: item.inProgress || 0,
+    completed: item.completed || 0
   })) || []
 
-  // Use real weekly trend data from API
   const weeklyTrendData = stats?.weeklyTrend || []
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Manage your clinic operations</p>
       </div>
 
       {loading ? (
@@ -53,7 +50,6 @@ export default function DashboardPage() {
         </Card>
       ) : (
         <>
-          {/* KPI Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -93,9 +89,7 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Analytics Charts */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Queue by Doctor Bar Chart */}
             <Card>
               <CardHeader>
                 <CardTitle>Queue by Doctor (Today)</CardTitle>
@@ -103,9 +97,16 @@ export default function DashboardPage() {
               <CardContent>
                 {queueByDoctorData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={queueByDoctorData}>
+                    <BarChart data={queueByDoctorData} margin={{ bottom: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        interval={0}
+                        fontSize={12}
+                      />
                       <YAxis />
                       <Tooltip />
                       <Bar dataKey="waiting" stackId="a" fill="#FF8042" name="Waiting" />
@@ -121,7 +122,45 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Weekly Trend Line Chart */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Appointments Overview (Today)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Scheduled', value: stats?.overview.todayAppointments || 0, fill: '#8884d8' },
+                        { name: 'Completed', value: stats?.overview.completedToday || 0, fill: '#82ca9d' },
+                        { name: 'Active Queue', value: stats?.overview.activeQueue || 0, fill: '#ffc658' },
+                        { name: 'Waiting', value: stats?.overview.waitingPatients || 0, fill: '#ff7300' }
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => percent && percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : ''}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {[
+                        { name: 'Scheduled', value: stats?.overview.todayAppointments || 0, fill: '#8884d8' },
+                        { name: 'Completed', value: stats?.overview.completedToday || 0, fill: '#82ca9d' },
+                        { name: 'Active Queue', value: stats?.overview.activeQueue || 0, fill: '#ffc658' },
+                        { name: 'Waiting', value: stats?.overview.waitingPatients || 0, fill: '#ff7300' }
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Weekly Appointments Trend</CardTitle>
@@ -145,17 +184,13 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
 
-          {/* Status Distribution and Recent Activities */}
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* Patient Status Pie Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Today's Status Distribution</CardTitle>
+                <CardTitle>Queue Distribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
                       data={[
@@ -181,38 +216,6 @@ export default function DashboardPage() {
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Recent Activities */}
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Recent Activities</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-[250px] overflow-y-auto">
-                  {stats?.recentActivities && stats.recentActivities.length > 0 ? (
-                    stats.recentActivities.map((activity) => (
-                      <div key={activity._id} className="flex items-center justify-between p-3 rounded-lg">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            Patient {activity.patientId?.name || 'Unknown'} - Queue #{activity.queueNumber}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Dr. {activity.doctorId?.name || 'Unknown'} • Status: {activity.status}
-                          </p>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(activity.updatedAt).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-muted-foreground py-8">
-                      No recent activities today
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
           </div>

@@ -7,7 +7,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     await connectDB()
     
-    // Await the params object
     const { id } = await params
     
     const doctor = await Doctor.findById(id).select('-__v')
@@ -37,11 +36,9 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   try {
     await connectDB()
     
-    // Await the params object
     const { id } = await params
     const body = await request.json()
     
-    // Basic validation
     if (body.email && !/\S+@\S+\.\S+/.test(body.email)) {
       return NextResponse.json(
         { error: 'Invalid email format' },
@@ -49,7 +46,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
     
-    // Check for duplicate email or license number if being updated
     if (body.email || body.licenseNumber) {
       const existingDoctor = await Doctor.findOne({
         _id: { $ne: id },

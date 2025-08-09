@@ -19,7 +19,6 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build query
     const query: any = {}
     if (doctorId) query.doctorId = doctorId
     if (patientId) query.patientId = patientId
@@ -41,7 +40,6 @@ export async function GET(req: NextRequest) {
       Appointment.countDocuments(query)
     ])
 
-    // Transform data to match frontend expectations
     const transformedAppointments = appointments.map((appointment: any) => ({
       _id: appointment._id,
       patient: {
@@ -90,7 +88,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
-    // Basic validation
     if (!body.patientId || !body.doctorId || !body.appointmentDate || !body.appointmentTime) {
       return NextResponse.json(
         { error: 'Patient ID, Doctor ID, appointment date, and time are required' },
@@ -98,7 +95,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify patient exists
     const patient = await Patient.findById(body.patientId)
     if (!patient) {
       return NextResponse.json(
@@ -129,12 +125,9 @@ export async function POST(req: NextRequest) {
     })
 
     await appointment.save()
-    
-    // Populate the saved appointment
     await appointment.populate('patientId')
     await appointment.populate('doctorId')
 
-    // Transform response to match frontend expectations
     const transformedAppointment = {
       _id: appointment._id,
       patient: {

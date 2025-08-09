@@ -14,7 +14,6 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const date = searchParams.get('date')
 
-    // Build query
     const query: any = {}
     if (doctorId) query.doctorId = doctorId
     if (status) query.status = status
@@ -30,7 +29,6 @@ export async function GET(req: NextRequest) {
       .populate('doctorId')
       .sort({ priority: -1, queueNumber: 1 })
 
-    // Transform data to match frontend expectations
     const transformedQueue = queueEntries.map((entry: any) => ({
       _id: entry._id,
       queueNumber: entry.queueNumber,
@@ -72,7 +70,6 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
 
-    // Basic validation
     if (!body.patientId || !body.doctorId) {
       return NextResponse.json(
         { error: 'Patient ID and Doctor ID are required' },
@@ -89,7 +86,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Verify doctor exists
     const doctor = await Doctor.findById(body.doctorId)
     if (!doctor) {
       return NextResponse.json(
@@ -98,7 +94,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if patient is already in queue for today
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today)
@@ -118,7 +113,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Get next queue number for this doctor today
     const lastEntry = await Queue.findOne({
       doctorId: body.doctorId,
       createdAt: { $gte: today, $lt: tomorrow }
@@ -126,7 +120,6 @@ export async function POST(req: NextRequest) {
 
     const queueNumber = lastEntry ? lastEntry.queueNumber + 1 : 1
 
-    // Create queue entry
     const queueEntry = new Queue({
       patientId: body.patientId,
       doctorId: body.doctorId,
@@ -138,12 +131,9 @@ export async function POST(req: NextRequest) {
     })
 
     await queueEntry.save()
-    
-    // Populate the saved entry
     await queueEntry.populate('patientId')
     await queueEntry.populate('doctorId')
 
-    // Transform response to match frontend expectations
     const transformedEntry = {
       _id: queueEntry._id,
       queueNumber: queueEntry.queueNumber,

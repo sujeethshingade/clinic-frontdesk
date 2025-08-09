@@ -7,7 +7,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     await connectDB()
     
-    // Await the params object
     const { id } = await params
     
     const patient = await Patient.findById(id).select('-__v')
@@ -19,7 +18,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
     
-    // Transform response to match frontend expectations
     const transformedPatient = {
       _id: patient._id,
       patientId: `P${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`,
@@ -85,7 +83,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       }
     }
     
-    // Use dot notation for nested updates
     Object.keys(contactInfoUpdates).forEach(key => {
       updateData[`contactInfo.${key}`] = contactInfoUpdates[key]
     })
@@ -103,7 +100,6 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       )
     }
     
-    // Transform response to match frontend expectations
     const transformedPatient = {
       _id: patient._id,
       patientId: `P${String(Math.floor(Math.random() * 999999) + 1).padStart(6, '0')}`,

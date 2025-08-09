@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    // Get last 7 days for trend data
     const last7Days = new Date(today)
     last7Days.setDate(last7Days.getDate() - 6)
 
@@ -29,47 +28,38 @@ export async function GET(req: NextRequest) {
       upcomingAppointments,
       waitingPatients
     ] = await Promise.all([
-      // Total patients
       Patient.countDocuments(),
       
-      // Total doctors
       Doctor.countDocuments(),
       
-      // Today's total queue entries
       Queue.countDocuments({
         createdAt: { $gte: today, $lt: tomorrow }
       }),
       
-      // Today's appointments
       Appointment.countDocuments({
-        appointmentDateTime: { $gte: today, $lt: tomorrow }
+        appointmentDate: { $gte: today, $lt: tomorrow }
       }),
       
-      // Active queue (waiting + in-progress)
       Queue.countDocuments({
         status: { $in: ['waiting', 'in-progress'] },
         createdAt: { $gte: today, $lt: tomorrow }
       }),
       
-      // Completed today
       Queue.countDocuments({
         status: 'completed',
         createdAt: { $gte: today, $lt: tomorrow }
       }),
       
-      // Upcoming appointments (next 7 days)
       Appointment.countDocuments({
-        appointmentDateTime: { $gte: tomorrow, $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }
+        appointmentDate: { $gte: tomorrow, $lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }
       }),
       
-      // Current waiting patients
       Queue.countDocuments({
         status: 'waiting',
         createdAt: { $gte: today, $lt: tomorrow }
       })
     ])
 
-    // Get queue by doctor for today
     const queueByDoctor = await Queue.aggregate([
       {
         $match: {
@@ -90,7 +80,11 @@ export async function GET(req: NextRequest) {
       {
         $group: {
           _id: '$doctorId',
-          doctorName: { $first: '$doctorInfo.name' },
+          doctorName: { 
+            $first: { 
+              $concat: ['$doctorInfo.firstName', ' ', '$doctorInfo.lastName'] 
+            } 
+          },
           waiting: {
             $sum: {
               $cond: [{ $eq: ['$status', 'waiting'] }, 1, 0]
@@ -114,7 +108,6 @@ export async function GET(req: NextRequest) {
       }
     ])
 
-    // Get weekly trend data (last 7 days)
     const weeklyTrend = await Promise.all(
       Array.from({ length: 7 }, async (_, i) => {
         const date = new Date(last7Days)
@@ -124,7 +117,7 @@ export async function GET(req: NextRequest) {
 
         const [appointmentCount, completedCount] = await Promise.all([
           Appointment.countDocuments({
-            appointmentDateTime: { $gte: date, $lt: nextDay }
+            appointmentDate: { $gte: date, $lt: nextDay }
           }),
           Queue.countDocuments({
             status: 'completed',
@@ -141,15 +134,14 @@ export async function GET(req: NextRequest) {
       })
     )
 
-    // Recent activities (last 10 queue updates)
     const recentActivities = await Queue.find({
       createdAt: { $gte: today, $lt: tomorrow }
     })
-      .populate('patientId', 'name')
-      .populate('doctorId', 'name')
+      .populate('patientId', 'fullName')
+      .populate('doctorId', 'firstName lastName')
       .sort({ updatedAt: -1 })
       .limit(10)
-      .select('patientId doctorId status queueNumber updatedAt')
+      .select('patientId doctorId status queueNumber updatedAt reason')
 
     return NextResponse.json({
       overview: {

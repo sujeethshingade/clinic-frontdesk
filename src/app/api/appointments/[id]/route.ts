@@ -7,7 +7,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await connectDB()
     
-    // Await the params object
     const { id } = await params
 
     const appointment = await Appointment.findById(id)
@@ -39,7 +38,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     await connectDB()
     
-    // Await the params object
     const { id } = await params
     const body = await req.json()
 
@@ -76,7 +74,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   try {
     await connectDB()
     
-    // Await the params object
     const { id } = await params
 
     const appointment = await Appointment.findByIdAndDelete(id)
